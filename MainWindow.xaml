@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TDL"
         mc:Ignorable="d"
-        Title="TDL - Дум Ивана Тарского" Height="530" Width="452" Icon="/_LOGO.png">
+        Title="TDL - Дум" Height="530" Width="452" Icon="/_LOGO.png">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="24.5*"/>
