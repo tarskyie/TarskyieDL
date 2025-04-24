@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,55 +29,68 @@ namespace TDL
         //ну тут тип дальше надо вот
         int i = 0;
         bool tb_change_permission = false;
+        private const string SaveFilePath = "save_data.json";
+
+
         public MainWindow()
         {
             InitializeComponent();
-            lb_load("iw_save.txt", iw_lb);
-            lb_load("ef_save.txt", ef_lb);
-            tb_load("en_save.txt", engine_tb);
+            LoadData();
         }
-        //функция сохранения листбокса в тхт жоска "дру"
-        private void lb_save(string filename, ListBox lbname)
+
+        private void SaveData()
         {
-            using(StreamWriter writer = new StreamWriter(filename))
+            string iwadStr = string.Empty;
+            foreach (string theItem in iw_lb.Items)
             {
-                foreach (var item in lbname.Items)
-                {
-                    writer.WriteLine(item.ToString());
-                }
+                iwadStr = string.Join(";", theItem);
             }
-        }
-        
-        private void lb_load(string filename, ListBox lbname)
-        {
-            if (File.Exists(filename))
+            string efStr = string.Empty;
+            foreach (string theItem in ef_lb.Items)
             {
-                using (StreamReader reader = new StreamReader(filename))
+                efStr = string.Join(";", theItem);
+            }
+            var saveData = new SaveClass
+            {
+                iwad = iwadStr,
+                ef = efStr,
+                args = aa_tb.Text,
+                engine = engine_tb.Text
+            };
+
+            string json = JsonSerializer.Serialize(saveData, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(SaveFilePath, json);
+        }
+
+        private void LoadData()
+        {
+            if (File.Exists(SaveFilePath))
+            {
+                string json = File.ReadAllText(SaveFilePath);
+                var saveData = JsonSerializer.Deserialize<SaveClass>(json);
+
+                if (saveData != null)
                 {
-                    string line;
-                    while ((line = reader.ReadLine()) != null)
+                    iw_lb.Items.Clear();
+                    if (!string.IsNullOrEmpty(saveData.iwad))
                     {
-                        lbname.Items.Add(line);
+                        foreach (var item in saveData.iwad.Split(';'))
+                        {
+                            iw_lb.Items.Add(item);
+                        }
                     }
-                }
-            }
-        }
 
-        private void tb_save(string filename, TextBox tbname)
-        {
-            using (StreamWriter writer = new StreamWriter(filename))
-            {
-                writer.Write(tbname.Text);
-            }
-        }
+                    ef_lb.Items.Clear();
+                    if (!string.IsNullOrEmpty(saveData.ef))
+                    {
+                        foreach (var item in saveData.ef.Split(';'))
+                        {
+                            ef_lb.Items.Add(item);
+                        }
+                    }
 
-        private void tb_load(string filename, TextBox tbname)
-        {
-            if (File.Exists(filename))
-            {
-                using (StreamReader reader = new StreamReader(filename))
-                {
-                    tbname.Text = reader.ReadLine();
+                    aa_tb.Text = saveData.args;
+                    engine_tb.Text = saveData.engine;
                 }
             }
         }
@@ -89,9 +103,7 @@ namespace TDL
             {
                 iw_lb.Items.Add(ofd.FileName);
             }
-            lb_save("iw_save.txt", iw_lb);
-            iw_lb.Items.Clear();
-            lb_load("iw_save.txt", iw_lb);
+            SaveData();
         }
 
         private void iw_rem_a(object sender, RoutedEventArgs e)
@@ -99,9 +111,7 @@ namespace TDL
             if(iw_lb.SelectedItem != null)
             {
                 iw_lb.Items.Remove(iw_lb.SelectedItem);
-                lb_save("iw_save.txt", iw_lb);
-                iw_lb.Items.Clear();
-                lb_load("iw_save.txt", iw_lb);
+                SaveData();
             }
         }
 
@@ -113,9 +123,7 @@ namespace TDL
             {
                 ef_lb.Items.Add(ofd.FileName);
             }
-            lb_save("ef_save.txt", ef_lb);
-            ef_lb.Items.Clear();
-            lb_load("ef_save.txt", ef_lb);
+            SaveData();
         }
 
         private void ef_rem_a(object sender, RoutedEventArgs e)
@@ -123,46 +131,37 @@ namespace TDL
             if(ef_lb.SelectedItem != null)
             {
                 ef_lb.Items.Remove(ef_lb.SelectedItem);
-                lb_save("ef_save.txt", ef_lb);
-                ef_lb.Items.Clear();
-                lb_load("ef_save.txt", ef_lb);
+                SaveData();
             }
         }
 
         private void ef_up_a(object sender, RoutedEventArgs e)
         {
             MoveItem(-1, ef_lb);
-            lb_save("ef_save.txt", ef_lb);
+            SaveData();
         }
 
         private void MoveItem(int direction, ListBox lbItems)
         {
-            // Checking selected item
             if (lbItems.SelectedItem == null || lbItems.SelectedIndex < 0)
-                return; // No selected item - nothing to do
+                return; 
 
-            // Calculate new index using move direction
             int newIndex = lbItems.SelectedIndex + direction;
 
-            // Checking bounds of the range
             if (newIndex < 0 || newIndex >= lbItems.Items.Count)
-                return; // Index out of range - nothing to do
+                return; 
 
-            //var items = lbItems.ItemsSource as ObservableCollection<string>;
             var selectedItem = lbItems.SelectedItem as string;
 
-            // Removing removable element
             lbItems.Items.Remove(selectedItem);
-            // Insert it in new position
             lbItems.Items.Insert(newIndex, selectedItem);
-            // Restore selection
             lbItems.SelectedIndex = newIndex;
         }
 
         private void ef_down_a(object sender, RoutedEventArgs e)
         {
             MoveItem(1, ef_lb);
-            lb_save("ef_save.txt", ef_lb);
+            SaveData();
         }
 
         private void select_engine(object sender, RoutedEventArgs e)
@@ -173,14 +172,14 @@ namespace TDL
             {
                 engine_tb.Text = ofd.FileName;
             }
-            tb_save("en_save.txt", engine_tb);
+            SaveData();
         }
 
         private void engine_change(object sender, TextChangedEventArgs e)
         {
             if(tb_change_permission == true)
             {
-                tb_save("en_save.txt", engine_tb);
+                SaveData();
             }
             else 
             { 
@@ -219,11 +218,11 @@ namespace TDL
             string exePath = engine_tb.Text;
             if (iw_lb.SelectedItem != null)
             {
-                string args = "-iwad "+iw_lb.SelectedItem.ToString();
+                string args = "-iwad \"" + iw_lb.SelectedItem.ToString() + "\"";
                 
                 foreach (var item in ef_lb.Items)
                 {
-                    args = args + " -file " + item.ToString();
+                    args = args + " -file \"" + item.ToString()+"\"";
                 }
                 if (aa_tb.Text != null)
                 {
